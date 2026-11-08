@@ -1,0 +1,16 @@
+.env
+.venv/
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+*.pyc
+*.db
+backups/
+dist/
+
+# Local configuration and editor state
+.env.*
+!.env.example
+.obsidian/
+.coverage
+htmlcov/

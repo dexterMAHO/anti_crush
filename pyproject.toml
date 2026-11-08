@@ -1,0 +1,24 @@
+[project]
+name = "confession-bot"
+version = "0.1.0"
+description = "Persistent Persian anonymous confession Telegram bot"
+requires-python = ">=3.12"
+dependencies = ["aiogram>=3.15,<4", "sqlalchemy[asyncio]>=2.0,<3", "asyncpg>=0.30", "alembic>=1.14", "pydantic-settings>=2.7", "httpx>=0.28"]
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.25", "aiosqlite>=0.20", "ruff>=0.9"]
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+asyncio_default_fixture_loop_scope = "function"
+testpaths = ["tests"]
+[tool.ruff]
+line-length = 100
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+[[tool.uv.index]]
+name = "aliyun"
+url = "https://mirrors.aliyun.com/pypi/simple"
+default = true
