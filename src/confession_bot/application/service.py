@@ -143,6 +143,10 @@ class Service:
             )
             return True
 
+    async def whoami(self, actor):
+        async with self.sessions.begin() as session:
+            return await Repository(session).role(actor)
+
     async def mine(self, actor):
         async with self.sessions.begin() as session:
             repo = Repository(session)
@@ -247,7 +251,12 @@ class Service:
 
             user = await repo.get(User, id=msg.user_id)
             repo.audit(actor, "IDENTITY_ACCESS", code, reason=reason)
-            return {"telegram_id": user.telegram_id, "profile": user.profile}
+            return {
+                "code": msg.code,
+                "text": msg.original_text,
+                "telegram_id": user.telegram_id,
+                "profile": user.profile,
+            }
 
     async def set_role(self, actor, target, role):
         async with self.sessions.begin() as session:
