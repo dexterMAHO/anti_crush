@@ -115,3 +115,31 @@ def test_discovery_archives_before_advancing_offset(tmp_path, monkeypatch):
             "CHANNEL_ID": -100123,
         }
     assert len(archive.read_text().splitlines()) == 3
+
+
+@pytest.mark.parametrize(
+    "token",
+    [
+        "",
+        "ghp_example",
+        "bot123:abc",
+        "<123:abc>",
+        "https://api.telegram.org/bot123:abc",
+        "123:abc/extra",
+        "123:ab c",
+    ],
+)
+def test_reject_malformed_token_without_echoing_it(token):
+    with pytest.raises(finder.SetupError):
+        finder.validate_token(token)
+
+
+def test_strip_token_outer_whitespace():
+    assert finder.validate_token(" 123:abc_DEF-456\n") == "123:abc_DEF-456"
+
+
+def test_404_provides_safe_actionable_error():
+    with httpx.Client(transport=httpx.MockTransport(lambda request: httpx.Response(404))) as client:
+        with pytest.raises(finder.SetupError, match="--prompt-token") as error:
+            finder.api(client, "123:private-secret", "getMe")
+    assert "private-secret" not in str(error.value)

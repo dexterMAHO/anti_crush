@@ -5,6 +5,7 @@ import argparse
 import getpass
 import json
 import os
+import re
 import secrets
 import sys
 import time
@@ -20,8 +21,23 @@ class SetupError(Exception):
     pass
 
 
+def validate_token(token: str) -> str:
+    token = token.strip()
+    if not re.fullmatch(r"[0-9]+:[A-Za-z0-9_-]+", token):
+        raise SetupError(
+            "ساختار BOT_TOKEN درست نیست؛ فقط توکن BotFather را وارد کنید، "
+            "بدون پیشوند bot، آدرس اینترنتی یا علامت < >. توکن GitHub قابل استفاده نیست."
+        )
+    return token
+
+
 def api(client: httpx.Client, token: str, method: str, **data):
     response = client.post(f"https://api.telegram.org/bot{token}/{method}", json=data)
+    if response.status_code == 404:
+        raise SetupError(
+            "تلگرام پاسخ 404 داد؛ مقدار BOT_TOKEN را با توکن BotFather بررسی کنید. "
+            "برای ورود دوباره، اسکریپت را با --prompt-token اجرا کنید."
+        )
     if response.status_code == 401:
         raise SetupError("توکن نامعتبر است؛ توکن BotFather را وارد کنید.")
     if response.status_code == 409:
@@ -112,17 +128,33 @@ def discover(client: httpx.Client, token: str, timeout: int, archive: Path) -> d
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="یافتن شناسه مالک و کانال تلگرام")
+    parser.add_argument(
+        "--prompt-token",
+        action="store_true",
+        help="دریافت پنهان توکن به جای خواندن محیط و .env",
+    )
     parser.add_argument("--env-file", type=Path, default=ROOT / ".env")
     parser.add_argument("--timeout", type=int, default=300, help="زمان انتظار به ثانیه")
     parser.add_argument("--archive", type=Path, default=ROOT / ".local" / "id-discovery.jsonl")
     args = parser.parse_args()
     if args.timeout < 1:
         parser.error("--timeout باید مثبت باشد.")
-    token = os.environ.get("BOT_TOKEN") or dotenv_values(args.env_file).get("BOT_TOKEN")
+    token = None
+    source = "ورودی پنهان"
+    if not args.prompt_token:
+        token = os.environ.get("BOT_TOKEN")
+        source = "متغیر محیطی BOT_TOKEN"
+        if not token:
+            token = dotenv_values(args.env_file).get("BOT_TOKEN")
+            source = f"فایل {args.env_file}"
     if not token:
-        token = getpass.getpass("توکن BotFather (ورودی پنهان): ").strip()
-    if not token:
-        print("توکن وارد نشده است.", file=sys.stderr)
+        token = getpass.getpass("توکن BotFather (ورودی پنهان): ")
+        source = "ورودی پنهان"
+    print(f"منبع توکن: {source}")
+    try:
+        token = validate_token(token)
+    except SetupError as exc:
+        print(str(exc), file=sys.stderr)
         return 1
     print("پیش از ادامه، ربات اصلی را متوقف کنید: docker compose stop bot")
     print("این ابزار برای راه‌اندازی اولیه است؛ دریافت‌های آن به صف پردازش ربات منتقل نمی‌شوند.")
