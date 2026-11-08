@@ -7,12 +7,16 @@ ref="${1:-feat/button-ui}"
 remote="${REMOTE:-origin}"
 timeout="${HEALTH_TIMEOUT:-240}"
 
-cd "$(dirname "$0")/.."
+# Resolve the repository from the current directory, so the script may live
+# outside the tree it deploys and survive the checkout it performs.
+cd "$(git rev-parse --show-toplevel)"
 [ -f .env ] || { echo "Missing .env; copy .env.example and set the real values." >&2; exit 1; }
 docker compose version >/dev/null
 
-if [ -n "$(git status --porcelain)" ]; then
-  echo "Working tree is not clean; commit or stash changes before deploying." >&2
+# Untracked files are left alone; only tracked edits can be lost by a checkout.
+if [ -n "$(git status --porcelain --untracked-files=no)" ]; then
+  echo "Tracked changes present; commit or stash them before deploying:" >&2
+  git status --short --untracked-files=no >&2
   exit 1
 fi
 
